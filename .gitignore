@@ -1,0 +1,21 @@
+# Data & Models
+data/raw.csv
+data/processed/
+models/
+artifacts/
+
+# MLflow Database & Artifacts
+mlruns/
+mlflow.db
+
+# Python & Tests
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+*.log
+
+# Environments
+.env
+.venv/
+venv/
