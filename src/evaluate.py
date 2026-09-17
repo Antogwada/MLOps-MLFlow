@@ -4,6 +4,7 @@ import sys
 import argparse
 from pathlib import Path
 import pandas as pd
+import numpy as np
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, classification_report
 import mlflow
 import joblib
@@ -34,7 +35,6 @@ def evaluate_model(config_path: str = "configs/config.yaml"):
         model = joblib.load(local_model_path)
         print(f"Modèle chargé depuis : {local_model_path}")
     else:
-        # Tenter depuis le registre MLflow
         model_uri = f"models:/{cfg.mlflow.registered_model_name}/latest"
         model = mlflow.sklearn.load_model(model_uri)
         print(f"Modèle chargé depuis le registre MLflow : {model_uri}")
@@ -44,15 +44,22 @@ def evaluate_model(config_path: str = "configs/config.yaml"):
     X_test = test_df.drop(columns=[target_col])
     y_test = test_df[target_col]
 
+    # Sécurité : conversion en entiers si les étiquettes sont encore textuelles ('Yes'/'No')
+    if y_test.dtype != int:
+        y_test = y_test.astype(str).str.strip().map({"Yes": 1, "No": 0, "1": 1, "0": 0}).astype(int)
+
     # Inférence
     y_pred = model.predict(X_test)
+    if y_pred.dtype != int:
+        y_pred = pd.Series(y_pred).astype(str).str.strip().map({"Yes": 1, "No": 0, "1": 1, "0": 0}).astype(int).values
+
     y_prob = model.predict_proba(X_test)[:, 1]
 
     # Calcul des métriques
     acc = accuracy_score(y_test, y_pred)
-    prec = precision_score(y_test, y_pred)
-    rec = recall_score(y_test, y_pred)
-    f1 = f1_score(y_test, y_pred)
+    prec = precision_score(y_test, y_pred, pos_label=1, zero_division=0)
+    rec = recall_score(y_test, y_pred, pos_label=1, zero_division=0)
+    f1 = f1_score(y_test, y_pred, pos_label=1, zero_division=0)
     roc_auc = roc_auc_score(y_test, y_prob)
 
     print("=== ÉVALUATION FINALE SUR LE TEST SET ===")
@@ -61,7 +68,7 @@ def evaluate_model(config_path: str = "configs/config.yaml"):
     print(f"Recall    : {rec * 100:.2f}%")
     print(f"F1-Score  : {f1 * 100:.2f}%")
     print(f"ROC-AUC   : {roc_auc:.4f}")
-    print("\nRapport détaillé :\n", classification_report(y_test, y_pred))
+    print("\nRapport détaillé :\n", classification_report(y_test, y_pred, target_names=["No Churn (0)", "Churn (1)"]))
 
     # Génération des artefacts graphiques
     artifacts_dir = Path("artifacts")

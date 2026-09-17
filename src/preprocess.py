@@ -22,7 +22,7 @@ def preprocess_data(config_path: str = "configs/config.yaml"):
     df = pd.read_csv(raw_path)
     print(f"Chargement de {raw_path} : {df.shape}")
 
-    # 1. Nettoyage de TotalCharges (espaces vides convertis en NaN puis remplis avec mediane)
+    # 1. Nettoyage de TotalCharges (espaces vides convertis en NaN puis remplis avec médiane)
     df["TotalCharges"] = pd.to_numeric(df["TotalCharges"].astype(str).str.strip(), errors="coerce")
     missing_tc = df["TotalCharges"].isna().sum()
     if missing_tc > 0:
@@ -31,9 +31,11 @@ def preprocess_data(config_path: str = "configs/config.yaml"):
         print(f"Remplacement de {missing_tc} valeurs manquantes dans TotalCharges par la médiane ({median_tc:.2f})")
 
     # 2. Encodage de la variable cible Churn (Yes/No -> 1/0)
+    # Compatible à la fois avec dtype object, str, category, PyArrow string
     target_col = cfg.data.target
-    if df[target_col].dtype == object:
-        df[target_col] = df[target_col].map({"Yes": 1, "No": 0})
+    if target_col in df.columns:
+        df[target_col] = df[target_col].astype(str).str.strip().map({"Yes": 1, "No": 0, "1": 1, "0": 0})
+        df[target_col] = df[target_col].astype(int)
     print(f"Distribution de la cible {target_col} :\n{df[target_col].value_counts(normalize=True)}")
 
     # 3. Sélection des colonnes utiles

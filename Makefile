@@ -39,7 +39,6 @@ init:
 	@echo "Activez-le via : source $(VENV_BIN)/activate (ou .\\venv\\Scripts\\Activate.ps1)"
 
 install:
-	$(VENV_PIP) install --upgrade pip
 	$(VENV_PIP) install -r requirements.txt
 
 get_data:
